@@ -1,0 +1,457 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英語の数字フラッシュカード 1〜100</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, "Noto Sans JP", sans-serif;
+  background: #f3f0e8;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px;
+}
+
+h1 {
+  font-size: clamp(22px, 5vw, 30px);
+  color: #5a258f;
+  text-align: center;
+  margin: 8px 0;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 14px;
+  margin: 4px 0 18px;
+  text-align: center;
+}
+
+.progress-area {
+  width: 100%;
+  max-width: 520px;
+  margin-bottom: 14px;
+}
+
+.progress-text {
+  text-align: center;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: #ddd5e7;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 1%;
+  background: #7b3fc6;
+  transition: width 0.2s;
+}
+
+.card {
+  width: 100%;
+  max-width: 520px;
+  height: clamp(260px, 48vh, 370px);
+  min-height: 250px;
+  background: #fffdf8;
+  border: 3px solid #7b3fc6;
+  border-radius: 24px;
+  box-shadow: 0 5px 12px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s;
+}
+
+.card:active {
+  transform: scale(0.99);
+}
+
+.card-label {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 18px;
+}
+
+.card-main {
+  color: #5a258f;
+  font-size: clamp(76px, 19vw, 130px);
+  font-weight: bold;
+  line-height: 1.1;
+  text-align: center;
+  overflow-wrap: anywhere;
+  padding: 0 12px;
+}
+
+.card-main.word {
+  font-size: clamp(42px, 10vw, 76px);
+}
+
+.card-hint {
+  color: #888;
+  font-size: 14px;
+  margin-top: 22px;
+}
+
+.buttons {
+  width: 100%;
+  max-width: 520px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+button {
+  border: none;
+  border-radius: 14px;
+  min-height: 58px;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 12px 8px;
+  font-family: inherit;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.flip-button {
+  grid-column: 1 / -1;
+  background: #7b3fc6;
+  color: white;
+  font-size: 20px;
+  min-height: 64px;
+}
+
+.nav-button {
+  background: #fffdf8;
+  color: #5a258f;
+  border: 2px solid #d7c4ed;
+}
+
+.audio-button {
+  grid-column: 1 / -1;
+  background: #f5e7c2;
+  color: #664500;
+}
+
+.restart-button {
+  width: 100%;
+  max-width: 520px;
+  background: #e7e0ef;
+  color: #5a258f;
+  margin-top: 12px;
+}
+
+.message {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin: 16px 0 4px;
+  min-height: 22px;
+}
+
+@media (max-height: 600px) {
+  body {
+    padding-top: 8px;
+  }
+
+  .subtitle {
+    margin-bottom: 8px;
+  }
+
+  .card {
+    height: 230px;
+    min-height: 220px;
+  }
+
+  .buttons {
+    margin-top: 10px;
+    gap: 8px;
+  }
+
+  button {
+    min-height: 46px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<h1>英語の数字フラッシュカード</h1>
+<p class="subtitle">数字を見て、英語で言ってみよう！</p>
+
+<div class="progress-area">
+  <div class="progress-text" id="progressText">1 / 100</div>
+  <div class="progress-track">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+</div>
+
+<div
+  class="card"
+  id="card"
+  role="button"
+  tabindex="0"
+  aria-label="フラッシュカード。押すとめくります"
+>
+  <div class="card-label" id="cardLabel">おもて</div>
+  <div class="card-main" id="cardMain">1</div>
+  <div class="card-hint" id="cardHint">タップしてめくる</div>
+</div>
+
+<div class="buttons">
+  <button class="nav-button" id="prevButton">← 前へ</button>
+  <button class="nav-button" id="nextButton">次へ →</button>
+
+  <button class="flip-button" id="flipButton">カードをめくる</button>
+
+  <button class="audio-button" id="audioButton">🔊 もう一度聞く</button>
+</div>
+
+<button class="restart-button" id="restartButton">
+  最初からやり直す
+</button>
+
+<div class="message" id="message" aria-live="polite">
+  1から100まで、順番に練習できます。
+</div>
+
+<script>
+const numberWords = [
+  "",
+  "one", "two", "three", "four", "five",
+  "six", "seven", "eight", "nine", "ten",
+  "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+  "sixteen", "seventeen", "eighteen", "nineteen", "twenty",
+  "twenty-one", "twenty-two", "twenty-three", "twenty-four",
+  "twenty-five", "twenty-six", "twenty-seven", "twenty-eight",
+  "twenty-nine", "thirty",
+  "thirty-one", "thirty-two", "thirty-three", "thirty-four",
+  "thirty-five", "thirty-six", "thirty-seven", "thirty-eight",
+  "thirty-nine", "forty",
+  "forty-one", "forty-two", "forty-three", "forty-four",
+  "forty-five", "forty-six", "forty-seven", "forty-eight",
+  "forty-nine", "fifty",
+  "fifty-one", "fifty-two", "fifty-three", "fifty-four",
+  "fifty-five", "fifty-six", "fifty-seven", "fifty-eight",
+  "fifty-nine", "sixty",
+  "sixty-one", "sixty-two", "sixty-three", "sixty-four",
+  "sixty-five", "sixty-six", "sixty-seven", "sixty-eight",
+  "sixty-nine", "seventy",
+  "seventy-one", "seventy-two", "seventy-three", "seventy-four",
+  "seventy-five", "seventy-six", "seventy-seven", "seventy-eight",
+  "seventy-nine", "eighty",
+  "eighty-one", "eighty-two", "eighty-three", "eighty-four",
+  "eighty-five", "eighty-six", "eighty-seven", "eighty-eight",
+  "eighty-nine", "ninety",
+  "ninety-one", "ninety-two", "ninety-three", "ninety-four",
+  "ninety-five", "ninety-six", "ninety-seven", "ninety-eight",
+  "ninety-nine", "one hundred"
+];
+
+let currentNumber = 1;
+let isFlipped = false;
+let voicesReady = false;
+
+const card = document.getElementById("card");
+const cardLabel = document.getElementById("cardLabel");
+const cardMain = document.getElementById("cardMain");
+const cardHint = document.getElementById("cardHint");
+const progressText = document.getElementById("progressText");
+const progressBar = document.getElementById("progressBar");
+const flipButton = document.getElementById("flipButton");
+const prevButton = document.getElementById("prevButton");
+const nextButton = document.getElementById("nextButton");
+const audioButton = document.getElementById("audioButton");
+const restartButton = document.getElementById("restartButton");
+const message = document.getElementById("message");
+
+// 音声エンジンの準備
+if ("speechSynthesis" in window) {
+  speechSynthesis.getVoices();
+
+  speechSynthesis.onvoiceschanged = () => {
+    voicesReady = true;
+  };
+} else {
+  message.textContent =
+    "このブラウザでは音声読み上げを利用できません。";
+}
+
+function speakWord() {
+  if (!("speechSynthesis" in window)) {
+    message.textContent = "音声読み上げに対応していません。";
+    return;
+  }
+
+  // 連続再生が重ならないようにする
+  speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(
+    numberWords[currentNumber]
+  );
+
+  utterance.lang = "en-US";
+  utterance.rate = 0.8;
+  utterance.pitch = 1;
+
+  // 英語の音声が選べる場合は英語音声を使用
+  const voices = speechSynthesis.getVoices();
+  const englishVoice = voices.find(
+    voice => voice.lang.toLowerCase() === "en-us"
+  ) || voices.find(
+    voice => voice.lang.toLowerCase().startsWith("en-")
+  );
+
+  if (englishVoice) {
+    utterance.voice = englishVoice;
+  }
+
+  speechSynthesis.speak(utterance);
+}
+
+function renderCard() {
+  cardLabel.textContent = isFlipped ? "うら" : "おもて";
+
+  if (isFlipped) {
+    cardMain.textContent = numberWords[currentNumber];
+    cardMain.classList.add("word");
+    cardHint.textContent = "英語の音声を聞こう";
+    card.style.background = "#fffdf8";
+    flipButton.textContent = "数字に戻る";
+  } else {
+    cardMain.textContent = currentNumber;
+    cardMain.classList.remove("word");
+    cardHint.textContent = "タップしてめくる";
+    card.style.background = "#fffdf8";
+    flipButton.textContent = "カードをめくる";
+  }
+
+  progressText.textContent = currentNumber + " / 100";
+  progressBar.style.width = currentNumber + "%";
+
+  prevButton.disabled = currentNumber === 1;
+  nextButton.disabled = currentNumber === 100;
+
+  if (currentNumber === 100) {
+    message.textContent = isFlipped
+      ? "最後の数字です！100までよく頑張りました！"
+      : "あと1枚！最後の数字を英語で言ってみよう。";
+  } else {
+    message.textContent = isFlipped
+      ? "英語を声に出して練習しよう！"
+      : "英語で何と言うか考えてから、めくろう！";
+  }
+}
+
+function flipCard() {
+  if (isFlipped) {
+    // 裏から表に戻る
+    isFlipped = false;
+
+    if ("speechSynthesis" in window) {
+      speechSynthesis.cancel();
+    }
+
+    renderCard();
+    return;
+  }
+
+  // 表から裏にめくる
+  isFlipped = true;
+  renderCard();
+
+  // めくったら自動で英語を読み上げる
+  speakWord();
+}
+
+function goNext() {
+  if (currentNumber >= 100) return;
+
+  if ("speechSynthesis" in window) {
+    speechSynthesis.cancel();
+  }
+
+  currentNumber++;
+  isFlipped = false;
+  renderCard();
+}
+
+function goPrevious() {
+  if (currentNumber <= 1) return;
+
+  if ("speechSynthesis" in window) {
+    speechSynthesis.cancel();
+  }
+
+  currentNumber--;
+  isFlipped = false;
+  renderCard();
+}
+
+function restart() {
+  if ("speechSynthesis" in window) {
+    speechSynthesis.cancel();
+  }
+
+  currentNumber = 1;
+  isFlipped = false;
+  renderCard();
+}
+
+card.addEventListener("click", flipCard);
+
+card.addEventListener("keydown", event => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    flipCard();
+  }
+});
+
+flipButton.addEventListener("click", flipCard);
+nextButton.addEventListener("click", goNext);
+prevButton.addEventListener("click", goPrevious);
+audioButton.addEventListener("click", () => {
+  if (!isFlipped) {
+    flipCard();
+  } else {
+    speakWord();
+  }
+});
+restartButton.addEventListener("click", restart);
+
+// 初期表示
+renderCard();
+</script>
+
+</body>
+</html>
