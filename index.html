@@ -860,8 +860,15 @@ orderSelect.addEventListener("change", changeSettings);
 // ===================================
 
 createQuestionList();
+
 showLoading();
-prepareSpeech();
+
+// 画面に「準備しています…」を表示してから準備開始
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    prepareSpeech();
+  });
+});
 
 </script>
 
