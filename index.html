@@ -483,17 +483,17 @@ function renderCard() {
     // 数字 → 英語
     if (isAnswer) {
 
-      cardLabel.textContent = "英語";
+      cardLabel.textContent = "";
 
       cardMain.textContent =
         numberWords[currentNumber];
 
       cardMain.classList.add("word");
 
-      speaker.textContent = "🔊";
+      speaker.textContent = "";
 
       cardHint.textContent =
-        "英語の音声を聞こう";
+        "";
 
       mainButton.textContent =
         isLast ? "終了！" : "次の数字へ →";
@@ -505,7 +505,7 @@ function renderCard() {
 
     } else {
 
-      cardLabel.textContent = "数字";
+      cardLabel.textContent = "";
 
       cardMain.textContent = currentNumber;
 
@@ -514,7 +514,7 @@ function renderCard() {
       speaker.textContent = "";
 
       cardHint.textContent =
-        "英語で何と言うかな？";
+        "";
 
       mainButton.textContent =
         "答えを見る →";
