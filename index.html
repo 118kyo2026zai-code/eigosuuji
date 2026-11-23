@@ -37,24 +37,28 @@ h1 {
   text-align: center;
 }
 
-.mode-area {
+.settings {
   width: 100%;
   max-width: 520px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
   margin-bottom: 18px;
 }
 
-.mode-area label {
+.setting label {
   display: block;
   text-align: center;
   color: #5a258f;
   font-weight: bold;
-  margin-bottom: 8px;
+  font-size: 14px;
+  margin-bottom: 7px;
 }
 
 select {
   width: 100%;
-  padding: 14px;
-  font-size: 17px;
+  padding: 13px 8px;
+  font-size: 15px;
   border: 2px solid #7b3fc6;
   border-radius: 12px;
   background: #fffdf8;
@@ -135,6 +139,7 @@ select {
 .speaker {
   color: #7b3fc6;
   margin-bottom: 12px;
+  font-size: 30px;
 }
 
 .buttons {
@@ -202,6 +207,16 @@ button:disabled {
   min-height: 22px;
 }
 
+@media (max-width: 380px) {
+  .settings {
+    gap: 7px;
+  }
+
+  select {
+    font-size: 13px;
+  }
+}
+
 @media (max-height: 600px) {
   body {
     padding-top: 8px;
@@ -233,18 +248,33 @@ button:disabled {
 <h1>英語の数字フラッシュカード</h1>
 <p class="subtitle">見て・聞いて・答えてみよう！</p>
 
-<!-- 学習モード -->
-<div class="mode-area">
-  <label for="modeSelect">学習モードを選ぼう</label>
-  <select id="modeSelect">
-    <option value="forward">数字 → 英語</option>
-    <option value="reverse">英語 → 数字</option>
-  </select>
+<!-- 設定 -->
+<div class="settings">
+
+  <div class="setting">
+    <label for="modeSelect">学習モード</label>
+    <select id="modeSelect">
+      <option value="forward">数字 → 英語</option>
+      <option value="reverse">英語 → 数字</option>
+    </select>
+  </div>
+
+  <div class="setting">
+    <label for="orderSelect">出題順</label>
+    <select id="orderSelect">
+      <option value="sequential">順番</option>
+      <option value="random">ランダム</option>
+    </select>
+  </div>
+
 </div>
 
 <!-- 進み具合 -->
 <div class="progress-area">
-  <div class="progress-text" id="progressText">1 / 100</div>
+  <div class="progress-text" id="progressText">
+    1 / 100
+  </div>
+
   <div class="progress-track">
     <div class="progress-bar" id="progressBar"></div>
   </div>
@@ -253,11 +283,15 @@ button:disabled {
 <!-- カード -->
 <div class="card">
 
-  <div class="card-label" id="cardLabel">数字</div>
+  <div class="card-label" id="cardLabel">
+    数字
+  </div>
 
   <div class="speaker" id="speaker"></div>
 
-  <div class="card-main" id="cardMain">1</div>
+  <div class="card-main" id="cardMain">
+    1
+  </div>
 
   <div class="card-hint" id="cardHint">
     英語で何と言うかな？
@@ -292,7 +326,10 @@ button:disabled {
 
 <script>
 
+// ===================================
 // 1〜100の英語表記
+// ===================================
+
 const numberWords = [
   "",
   "one", "two", "three", "four", "five",
@@ -325,17 +362,28 @@ const numberWords = [
   "ninety-nine", "one hundred"
 ];
 
-// 現在の数字
+// ===================================
+// 状態
+// ===================================
+
 let currentNumber = 1;
-
-// 学習モード
 let mode = "forward";
-
-// 答えを表示しているか
+let orderMode = "sequential";
 let isAnswer = false;
 
+// 出題する数字の順番
+let questionList = [];
+
+// 現在の問題の位置
+let currentIndex = 0;
+
+// ===================================
 // HTML要素
+// ===================================
+
 const modeSelect = document.getElementById("modeSelect");
+const orderSelect = document.getElementById("orderSelect");
+
 const cardLabel = document.getElementById("cardLabel");
 const cardMain = document.getElementById("cardMain");
 const cardHint = document.getElementById("cardHint");
@@ -351,11 +399,46 @@ const restartButton = document.getElementById("restartButton");
 
 const message = document.getElementById("message");
 
-// 英語音声を再生
+// ===================================
+// 出題順を作る
+// ===================================
+
+function createQuestionList() {
+
+  questionList = [];
+
+  // 1〜100を用意
+  for (let i = 1; i <= 100; i++) {
+    questionList.push(i);
+  }
+
+  // ランダムならシャッフル
+  if (orderMode === "random") {
+
+    for (let i = questionList.length - 1; i > 0; i--) {
+
+      const j = Math.floor(Math.random() * (i + 1));
+
+      [questionList[i], questionList[j]] =
+      [questionList[j], questionList[i]];
+
+    }
+
+  }
+
+  currentIndex = 0;
+  currentNumber = questionList[currentIndex];
+}
+
+// ===================================
+// 英語音声
+// ===================================
+
 function speakWord() {
 
   if (!("speechSynthesis" in window)) {
-    message.textContent = "音声読み上げに対応していません。";
+    message.textContent =
+      "音声読み上げに対応していません。";
     return;
   }
 
@@ -372,8 +455,12 @@ function speakWord() {
   const voices = speechSynthesis.getVoices();
 
   const englishVoice =
-    voices.find(v => v.lang.toLowerCase() === "en-us") ||
-    voices.find(v => v.lang.toLowerCase().startsWith("en-"));
+    voices.find(v =>
+      v.lang.toLowerCase() === "en-us"
+    ) ||
+    voices.find(v =>
+      v.lang.toLowerCase().startsWith("en-")
+    );
 
   if (englishVoice) {
     utterance.voice = englishVoice;
@@ -382,39 +469,55 @@ function speakWord() {
   speechSynthesis.speak(utterance);
 }
 
-// 画面を更新
+// ===================================
+// 画面更新
+// ===================================
+
 function renderCard() {
+
+  const isLast =
+    currentIndex === questionList.length - 1;
 
   if (mode === "forward") {
 
-    // 数字から英語モード
+    // 数字 → 英語
     if (isAnswer) {
 
       cardLabel.textContent = "英語";
-      cardMain.textContent = numberWords[currentNumber];
+
+      cardMain.textContent =
+        numberWords[currentNumber];
+
       cardMain.classList.add("word");
+
       speaker.textContent = "🔊";
-      cardHint.textContent = "英語の音声を聞こう";
+
+      cardHint.textContent =
+        "英語の音声を聞こう";
 
       mainButton.textContent =
-        currentNumber === 100
-          ? "終了！"
-          : "次の数字へ →";
+        isLast ? "終了！" : "次の数字へ →";
 
       message.textContent =
-        currentNumber === 100
-          ? "100までよく頑張りました！"
-          : "次へを押すと、次の数字になります。";
+        isLast
+          ? "100問終了！よく頑張りました！"
+          : "次へを押すと次の問題になります。";
 
     } else {
 
       cardLabel.textContent = "数字";
-      cardMain.textContent = currentNumber;
-      cardMain.classList.remove("word");
-      speaker.textContent = "";
-      cardHint.textContent = "英語で何と言うかな？";
 
-      mainButton.textContent = "答えを見る →";
+      cardMain.textContent = currentNumber;
+
+      cardMain.classList.remove("word");
+
+      speaker.textContent = "";
+
+      cardHint.textContent =
+        "英語で何と言うかな？";
+
+      mainButton.textContent =
+        "答えを見る →";
 
       message.textContent =
         "英語で考えたら答えを確認しよう！";
@@ -422,54 +525,69 @@ function renderCard() {
 
   } else {
 
-    // 英語から数字モード
+    // 英語 → 数字
     if (isAnswer) {
 
       cardLabel.textContent = "正解の数字";
+
       cardMain.textContent = currentNumber;
+
       cardMain.classList.remove("word");
+
       speaker.textContent = "";
-      cardHint.textContent = "正解を確認しよう！";
+
+      cardHint.textContent =
+        "正解を確認しよう！";
 
       mainButton.textContent =
-        currentNumber === 100
-          ? "終了！"
-          : "次の問題へ →";
+        isLast ? "終了！" : "次の問題へ →";
 
       message.textContent =
-        currentNumber === 100
-          ? "100までよく頑張りました！"
-          : "次へを押すと、次の英語が流れます。";
+        isLast
+          ? "100問終了！よく頑張りました！"
+          : "次へを押すと次の英語が流れます。";
 
     } else {
 
       cardLabel.textContent = "英語を聞こう";
-      cardMain.textContent = "？？？";
-      cardMain.classList.remove("word");
-      speaker.textContent = "🔊";
-      cardHint.textContent = "聞こえた数字を答えてね！";
 
-      mainButton.textContent = "答えを見る →";
+      cardMain.textContent = "？？？";
+
+      cardMain.classList.remove("word");
+
+      speaker.textContent = "🔊";
+
+      cardHint.textContent =
+        "聞こえた数字を答えてね！";
+
+      mainButton.textContent =
+        "答えを見る →";
 
       message.textContent =
-        "音声を聞いて、数字を考えよう！";
+        "音声を聞いて数字を考えよう！";
     }
   }
 
+  // 進み具合
   progressText.textContent =
-    currentNumber + " / 100";
+    (currentIndex + 1) + " / 100";
 
   progressBar.style.width =
-    currentNumber + "%";
+    ((currentIndex + 1) / 100 * 100) + "%";
 
+  // 前へボタン
   prevButton.disabled =
-    currentNumber === 1 && !isAnswer;
+    currentIndex === 0 && !isAnswer;
 
+  // 最後の答えを表示したら終了
   mainButton.disabled =
-    currentNumber === 100 && isAnswer;
+    isLast && isAnswer;
 }
 
-// 問題の音声を再生
+// ===================================
+// 逆モードの問題音声
+// ===================================
+
 function playQuestionAudio() {
 
   if (mode === "reverse" && !isAnswer) {
@@ -477,7 +595,10 @@ function playQuestionAudio() {
   }
 }
 
-// メインボタン
+// ===================================
+// 次へ・答えを見る
+// ===================================
+
 function nextAction() {
 
   if ("speechSynthesis" in window) {
@@ -488,31 +609,38 @@ function nextAction() {
 
     // 答えを表示
     isAnswer = true;
+
     renderCard();
 
-    // 数字→英語モードでは答えの音声を再生
+    // 数字→英語は答えの音声を再生
     if (mode === "forward") {
       speakWord();
     }
 
   } else {
 
-    // 次の数字へ
-    if (currentNumber >= 100) {
+    // 次の問題へ
+    if (currentIndex >= 99) {
       return;
     }
 
-    currentNumber++;
+    currentIndex++;
+
+    currentNumber = questionList[currentIndex];
+
     isAnswer = false;
 
     renderCard();
 
-    // 英語→数字モードでは次の問題を読み上げる
+    // 英語→数字は問題の音声を再生
     playQuestionAudio();
   }
 }
 
-// 前の問題へ
+// ===================================
+// 前へ
+// ===================================
+
 function goPrevious() {
 
   if ("speechSynthesis" in window) {
@@ -523,35 +651,43 @@ function goPrevious() {
 
     // 答えから問題に戻る
     isAnswer = false;
+
     renderCard();
 
-    // 逆モードなら問題の音声を再生
+    // 逆モードなら問題音声を再生
     playQuestionAudio();
 
   } else {
 
-    if (currentNumber <= 1) {
+    // 前の問題の答えへ
+    if (currentIndex <= 0) {
       return;
     }
 
-    currentNumber--;
+    currentIndex--;
+
+    currentNumber = questionList[currentIndex];
+
     isAnswer = true;
 
     renderCard();
 
-    // 前の問題の答えを確認する
+    // 順方向なら答えの音声を再生
     if (mode === "forward") {
       speakWord();
     }
   }
 }
 
+// ===================================
 // もう一度聞く
+// ===================================
+
 function repeatAudio() {
 
   if (mode === "forward") {
 
-    // 答えを表示していない場合は答えを出す
+    // 答えがまだなら表示する
     if (!isAnswer) {
       isAnswer = true;
       renderCard();
@@ -561,63 +697,94 @@ function repeatAudio() {
 
   } else {
 
-    // 逆モードでは問題の英語を再生
-    if (!isAnswer) {
-      speakWord();
-    } else {
-      speakWord();
-    }
+    // 逆モードは問題の英語を再生
+    speakWord();
   }
 }
 
-// モード変更
-function changeMode() {
+// ===================================
+// 設定変更
+// ===================================
+
+function changeSettings() {
 
   if ("speechSynthesis" in window) {
     speechSynthesis.cancel();
   }
 
   mode = modeSelect.value;
-  currentNumber = 1;
+  orderMode = orderSelect.value;
+
+  // 新しい出題順を作る
+  createQuestionList();
+
   isAnswer = false;
 
   renderCard();
 
-  // 逆モードを選んだときは最初の音声を再生
-  if (mode === "reverse") {
-    speakWord();
-  }
+  // 逆モードは最初から音声を流す
+  playQuestionAudio();
 }
 
-// 最初から
+// ===================================
+// 最初からやり直す
+// ===================================
+
 function restart() {
 
   if ("speechSynthesis" in window) {
     speechSynthesis.cancel();
   }
 
-  currentNumber = 1;
+  // ランダムの場合は新しくシャッフル
+  createQuestionList();
+
   isAnswer = false;
 
   renderCard();
 
-  if (mode === "reverse") {
-    speakWord();
-  }
+  playQuestionAudio();
 }
 
-// ボタンの設定
-mainButton.addEventListener("click", nextAction);
+// ===================================
+// ボタン設定
+// ===================================
 
-prevButton.addEventListener("click", goPrevious);
+mainButton.addEventListener(
+  "click",
+  nextAction
+);
 
-audioButton.addEventListener("click", repeatAudio);
+prevButton.addEventListener(
+  "click",
+  goPrevious
+);
 
-restartButton.addEventListener("click", restart);
+audioButton.addEventListener(
+  "click",
+  repeatAudio
+);
 
-modeSelect.addEventListener("change", changeMode);
+restartButton.addEventListener(
+  "click",
+  restart
+);
 
+modeSelect.addEventListener(
+  "change",
+  changeSettings
+);
+
+orderSelect.addEventListener(
+  "change",
+  changeSettings
+);
+
+// ===================================
 // 最初の画面
+// ===================================
+
+createQuestionList();
 renderCard();
 
 </script>
