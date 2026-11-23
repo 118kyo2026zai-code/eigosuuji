@@ -528,7 +528,7 @@ function renderCard() {
     // 英語 → 数字
     if (isAnswer) {
 
-      cardLabel.textContent = "正解の数字";
+      cardLabel.textContent = "";
 
       cardMain.textContent = currentNumber;
 
@@ -537,7 +537,7 @@ function renderCard() {
       speaker.textContent = "";
 
       cardHint.textContent =
-        "正解を確認しよう！";
+        ";
 
       mainButton.textContent =
         isLast ? "終了！" : "次の問題へ →";
@@ -549,22 +549,22 @@ function renderCard() {
 
     } else {
 
-      cardLabel.textContent = "英語を聞こう";
+      cardLabel.textContent = "";
 
-      cardMain.textContent = "？？？";
+      cardMain.textContent = "？";
 
       cardMain.classList.remove("word");
 
-      speaker.textContent = "🔊";
+      speaker.textContent = "";
 
       cardHint.textContent =
-        "聞こえた数字を答えてね！";
+        "";
 
       mainButton.textContent =
         "答えを見る →";
 
       message.textContent =
-        "音声を聞いて数字を考えよう！";
+        "";
     }
   }
 
