@@ -142,6 +142,36 @@ select {
   font-size: 30px;
 }
 
+/* 準備中の表示 */
+.loading-area {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #e7d9f5;
+  border-top-color: #7b3fc6;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+.loading-text {
+  color: #5a258f;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .buttons {
   width: 100%;
   max-width: 520px;
@@ -248,12 +278,11 @@ button:disabled {
 <h1>英語の数字フラッシュカード</h1>
 <p class="subtitle"></p>
 
-<!-- 設定 -->
 <div class="settings">
 
   <div class="setting">
     <label for="modeSelect">学習モード</label>
-    <select id="modeSelect">
+    <select id="modeSelect" disabled>
       <option value="forward">数字 → 英語</option>
       <option value="reverse">英語 → 数字</option>
     </select>
@@ -261,7 +290,7 @@ button:disabled {
 
   <div class="setting">
     <label for="orderSelect">出題順</label>
-    <select id="orderSelect">
+    <select id="orderSelect" disabled>
       <option value="sequential">順番</option>
       <option value="random">ランダム</option>
     </select>
@@ -269,60 +298,49 @@ button:disabled {
 
 </div>
 
-<!-- 進み具合 -->
 <div class="progress-area">
-  <div class="progress-text" id="progressText">
-    1 / 100
-  </div>
-
+  <div class="progress-text" id="progressText">1 / 100</div>
   <div class="progress-track">
     <div class="progress-bar" id="progressBar"></div>
   </div>
 </div>
 
-<!-- カード -->
 <div class="card">
 
-  <div class="card-label" id="cardLabel">
-    数字
+  <!-- 準備中の表示 -->
+  <div class="loading-area" id="loadingArea">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">準備しています…</div>
   </div>
 
+  <div class="card-label" id="cardLabel"></div>
   <div class="speaker" id="speaker"></div>
-
-  <div class="card-main" id="cardMain">
-    1
-  </div>
-
-  <div class="card-hint" id="cardHint">
-    英語で何と言うかな？
-  </div>
+  <div class="card-main" id="cardMain">1</div>
+  <div class="card-hint" id="cardHint"></div>
 
 </div>
 
-<!-- 操作ボタン -->
 <div class="buttons">
 
-  <button class="nav-button" id="prevButton">
+  <button class="nav-button" id="prevButton" disabled>
     ← 前へ
   </button>
 
-  <button class="nav-button" id="audioButton">
+  <button class="nav-button" id="audioButton" disabled>
     もう一度聞く
   </button>
 
-  <button class="main-button" id="mainButton">
+  <button class="main-button" id="mainButton" disabled>
     答えを見る →
   </button>
 
 </div>
 
-<button class="restart-button" id="restartButton">
+<button class="restart-button" id="restartButton" disabled>
   最初からやり直す
 </button>
 
-<div class="message" id="message">
-  
-</div>
+<div class="message" id="message"></div>
 
 <script>
 
@@ -370,12 +388,10 @@ let currentNumber = 1;
 let mode = "forward";
 let orderMode = "sequential";
 let isAnswer = false;
-
-// 出題する数字の順番
 let questionList = [];
-
-// 現在の問題の位置
 let currentIndex = 0;
+let isReady = false;
+let availableVoices = [];
 
 // ===================================
 // HTML要素
@@ -388,6 +404,7 @@ const cardLabel = document.getElementById("cardLabel");
 const cardMain = document.getElementById("cardMain");
 const cardHint = document.getElementById("cardHint");
 const speaker = document.getElementById("speaker");
+const loadingArea = document.getElementById("loadingArea");
 
 const progressText = document.getElementById("progressText");
 const progressBar = document.getElementById("progressBar");
@@ -400,6 +417,101 @@ const restartButton = document.getElementById("restartButton");
 const message = document.getElementById("message");
 
 // ===================================
+// 準備中の画面
+// ===================================
+
+function showLoading() {
+
+  loadingArea.style.display = "flex";
+
+  cardLabel.style.display = "none";
+  speaker.style.display = "none";
+  cardMain.style.display = "none";
+  cardHint.style.display = "none";
+
+  message.textContent = "音声を準備しています。";
+
+}
+
+// ===================================
+// 準備完了
+// ===================================
+
+function finishLoading() {
+
+  if (isReady) return;
+
+  isReady = true;
+
+  loadingArea.style.display = "none";
+
+  cardLabel.style.display = "";
+  speaker.style.display = "";
+  cardMain.style.display = "";
+  cardHint.style.display = "";
+
+  modeSelect.disabled = false;
+  orderSelect.disabled = false;
+  mainButton.disabled = false;
+  prevButton.disabled = false;
+  audioButton.disabled = false;
+  restartButton.disabled = false;
+
+  renderCard();
+
+  // 英語→数字モードなら最初の音声を再生
+  playQuestionAudio();
+
+}
+
+// ===================================
+// 音声の準備
+// ===================================
+
+function prepareSpeech() {
+
+  showLoading();
+
+  if (!("speechSynthesis" in window)) {
+    finishLoading();
+    message.textContent =
+      "このブラウザは音声読み上げに対応していません。";
+    return;
+  }
+
+  let finished = false;
+
+  function complete() {
+
+    if (finished) return;
+
+    finished = true;
+
+    availableVoices = speechSynthesis.getVoices();
+
+    finishLoading();
+
+  }
+
+  // 音声一覧が準備できたとき
+  speechSynthesis.addEventListener(
+    "voiceschanged",
+    complete
+  );
+
+  // すでに準備できている場合
+  availableVoices = speechSynthesis.getVoices();
+
+  if (availableVoices.length > 0) {
+    complete();
+  }
+
+  // 音声一覧が取得できない場合の予備処理
+  setTimeout(complete, 4000);
+
+}
+
+// ===================================
 // 出題順を作る
 // ===================================
 
@@ -407,12 +519,10 @@ function createQuestionList() {
 
   questionList = [];
 
-  // 1〜100を用意
   for (let i = 1; i <= 100; i++) {
     questionList.push(i);
   }
 
-  // ランダムならシャッフル
   if (orderMode === "random") {
 
     for (let i = questionList.length - 1; i > 0; i--) {
@@ -428,6 +538,7 @@ function createQuestionList() {
 
   currentIndex = 0;
   currentNumber = questionList[currentIndex];
+
 }
 
 // ===================================
@@ -452,13 +563,15 @@ function speakWord() {
   utterance.rate = 0.8;
   utterance.pitch = 1;
 
-  const voices = speechSynthesis.getVoices();
+  if (availableVoices.length === 0) {
+    availableVoices = speechSynthesis.getVoices();
+  }
 
   const englishVoice =
-    voices.find(v =>
+    availableVoices.find(v =>
       v.lang.toLowerCase() === "en-us"
     ) ||
-    voices.find(v =>
+    availableVoices.find(v =>
       v.lang.toLowerCase().startsWith("en-")
     );
 
@@ -467,6 +580,7 @@ function speakWord() {
   }
 
   speechSynthesis.speak(utterance);
+
 }
 
 // ===================================
@@ -475,25 +589,20 @@ function speakWord() {
 
 function renderCard() {
 
+  if (!isReady) return;
+
   const isLast =
     currentIndex === questionList.length - 1;
 
   if (mode === "forward") {
 
-    // 数字 → 英語
     if (isAnswer) {
 
       cardLabel.textContent = "";
-
-      cardMain.textContent =
-        numberWords[currentNumber];
-
+      cardMain.textContent = numberWords[currentNumber];
       cardMain.classList.add("word");
-
       speaker.textContent = "";
-
-      cardHint.textContent =
-        "";
+      cardHint.textContent = "";
 
       mainButton.textContent =
         isLast ? "終了！" : "次の数字へ →";
@@ -506,38 +615,27 @@ function renderCard() {
     } else {
 
       cardLabel.textContent = "";
-
       cardMain.textContent = currentNumber;
-
       cardMain.classList.remove("word");
-
       speaker.textContent = "";
+      cardHint.textContent = "";
 
-      cardHint.textContent =
-        "";
-
-      mainButton.textContent =
-        "答えを見る →";
+      mainButton.textContent = "答えを見る →";
 
       message.textContent =
         "英語で考えたら答えを確認しよう！";
+
     }
 
   } else {
 
-    // 英語 → 数字
     if (isAnswer) {
 
       cardLabel.textContent = "";
-
       cardMain.textContent = currentNumber;
-
       cardMain.classList.remove("word");
-
       speaker.textContent = "";
-
-      cardHint.textContent =
-        ";
+      cardHint.textContent = "";
 
       mainButton.textContent =
         isLast ? "終了！" : "次の問題へ →";
@@ -550,38 +648,31 @@ function renderCard() {
     } else {
 
       cardLabel.textContent = "";
-
       cardMain.textContent = "？";
-
       cardMain.classList.remove("word");
-
       speaker.textContent = "";
+      cardHint.textContent = "";
 
-      cardHint.textContent =
-        "";
+      mainButton.textContent = "答えを見る →";
 
-      mainButton.textContent =
-        "答えを見る →";
+      message.textContent = "";
 
-      message.textContent =
-        "";
     }
+
   }
 
-  // 進み具合
   progressText.textContent =
     (currentIndex + 1) + " / 100";
 
   progressBar.style.width =
     ((currentIndex + 1) / 100 * 100) + "%";
 
-  // 前へボタン
   prevButton.disabled =
     currentIndex === 0 && !isAnswer;
 
-  // 最後の答えを表示したら終了
   mainButton.disabled =
     isLast && isAnswer;
+
 }
 
 // ===================================
@@ -593,6 +684,7 @@ function playQuestionAudio() {
   if (mode === "reverse" && !isAnswer) {
     speakWord();
   }
+
 }
 
 // ===================================
@@ -601,25 +693,24 @@ function playQuestionAudio() {
 
 function nextAction() {
 
+  if (!isReady) return;
+
   if ("speechSynthesis" in window) {
     speechSynthesis.cancel();
   }
 
   if (!isAnswer) {
 
-    // 答えを表示
     isAnswer = true;
 
     renderCard();
 
-    // 数字→英語は答えの音声を再生
     if (mode === "forward") {
       speakWord();
     }
 
   } else {
 
-    // 次の問題へ
     if (currentIndex >= 99) {
       return;
     }
@@ -632,9 +723,10 @@ function nextAction() {
 
     renderCard();
 
-    // 英語→数字は問題の音声を再生
     playQuestionAudio();
+
   }
+
 }
 
 // ===================================
@@ -643,23 +735,22 @@ function nextAction() {
 
 function goPrevious() {
 
+  if (!isReady) return;
+
   if ("speechSynthesis" in window) {
     speechSynthesis.cancel();
   }
 
   if (isAnswer) {
 
-    // 答えから問題に戻る
     isAnswer = false;
 
     renderCard();
 
-    // 逆モードなら問題音声を再生
     playQuestionAudio();
 
   } else {
 
-    // 前の問題の答えへ
     if (currentIndex <= 0) {
       return;
     }
@@ -672,11 +763,12 @@ function goPrevious() {
 
     renderCard();
 
-    // 順方向なら答えの音声を再生
     if (mode === "forward") {
       speakWord();
     }
+
   }
+
 }
 
 // ===================================
@@ -685,9 +777,10 @@ function goPrevious() {
 
 function repeatAudio() {
 
+  if (!isReady) return;
+
   if (mode === "forward") {
 
-    // 答えがまだなら表示する
     if (!isAnswer) {
       isAnswer = true;
       renderCard();
@@ -697,9 +790,10 @@ function repeatAudio() {
 
   } else {
 
-    // 逆モードは問題の英語を再生
     speakWord();
+
   }
+
 }
 
 // ===================================
@@ -708,6 +802,8 @@ function repeatAudio() {
 
 function changeSettings() {
 
+  if (!isReady) return;
+
   if ("speechSynthesis" in window) {
     speechSynthesis.cancel();
   }
@@ -715,15 +811,14 @@ function changeSettings() {
   mode = modeSelect.value;
   orderMode = orderSelect.value;
 
-  // 新しい出題順を作る
   createQuestionList();
 
   isAnswer = false;
 
   renderCard();
 
-  // 逆モードは最初から音声を流す
   playQuestionAudio();
+
 }
 
 // ===================================
@@ -732,11 +827,12 @@ function changeSettings() {
 
 function restart() {
 
+  if (!isReady) return;
+
   if ("speechSynthesis" in window) {
     speechSynthesis.cancel();
   }
 
-  // ランダムの場合は新しくシャッフル
   createQuestionList();
 
   isAnswer = false;
@@ -744,48 +840,28 @@ function restart() {
   renderCard();
 
   playQuestionAudio();
+
 }
 
 // ===================================
 // ボタン設定
 // ===================================
 
-mainButton.addEventListener(
-  "click",
-  nextAction
-);
+mainButton.addEventListener("click", nextAction);
+prevButton.addEventListener("click", goPrevious);
+audioButton.addEventListener("click", repeatAudio);
+restartButton.addEventListener("click", restart);
 
-prevButton.addEventListener(
-  "click",
-  goPrevious
-);
-
-audioButton.addEventListener(
-  "click",
-  repeatAudio
-);
-
-restartButton.addEventListener(
-  "click",
-  restart
-);
-
-modeSelect.addEventListener(
-  "change",
-  changeSettings
-);
-
-orderSelect.addEventListener(
-  "change",
-  changeSettings
-);
+modeSelect.addEventListener("change", changeSettings);
+orderSelect.addEventListener("change", changeSettings);
 
 // ===================================
 // 最初の画面
 // ===================================
 
 createQuestionList();
-renderCard();
+showLoading();
+prepareSpeech();
 
 </script>
 
